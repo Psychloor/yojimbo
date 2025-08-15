@@ -128,6 +128,12 @@ set_target_properties(yojimbo
         EXPORT_NAME yojimbo
 )
 
+if (EXISTS "${CMAKE_SOURCE_DIR}/LICENCE")
+    configure_file("${CMAKE_SOURCE_DIR}/LICENCE" "${CMAKE_CURRENT_BINARY_DIR}/LICENSE" COPYONLY)
+else ()
+    message(WARNING "LICENSE file not found at ${CMAKE_SOURCE_DIR}/LICENCE. Skipping copy.")
+endif ()
+
 # Tests (if enabled)
 if (YOJIMBO_TESTS)
     # Helper function to create executables with proper linking
@@ -195,10 +201,23 @@ if (YOJIMBO_INSTALL)
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/yojimbo
     )
 
-    # Install license
-    install(FILES LICENSE
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
+    set(YOJIMBO_LICENSE_FILE "")
+    foreach(_cand LICENSE LICENSE.txt LICENCE LICENCE.txt)
+        if (EXISTS "${CMAKE_SOURCE_DIR}/${_cand}")
+            set(YOJIMBO_LICENSE_FILE "${CMAKE_SOURCE_DIR}/${_cand}")
+            break()
+        endif ()
+    endforeach()
+
+    if (YOJIMBO_LICENSE_FILE)
+        install(FILES "${YOJIMBO_LICENSE_FILE}"
+                DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/${PROJECT_NAME}"
+                RENAME "LICENSE"
+                COMPONENT doc
+        )
+    else ()
+        message(WARNING "No license file found (LICENSE/LICENCE). License will not be installed.")
+    endif ()
 
     # Install dependency headers
     install(DIRECTORY netcode/
