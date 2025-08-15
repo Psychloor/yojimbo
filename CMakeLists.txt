@@ -2,52 +2,53 @@
 project(Yojimbo LANGUAGES C CXX)
 
 # Configuration types
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
-endif()
+endif ()
 
 # Global settings
 set(CMAKE_CXX_RTTI OFF)
-if(NOT WIN32)
+if (NOT WIN32)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-endif()
+endif ()
 
 # Compiler flags
-if(MSVC)
+if (MSVC)
     add_compile_options(/W4 /WX)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /fp:fast")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /fp:fast")
-else()
+else ()
     add_compile_options(-Wall -Wextra -Werror)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -ffast-math")
-endif()
-
-# Include directories
-include_directories(. include sodium tlsf netcode reliable serialize)
+endif ()
 
 # Configuration-specific definitions
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DYOJIMBO_DEBUG -DNETCODE_DEBUG -DRELIABLE_DEBUG)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     add_definitions(-DYOJIMBO_RELEASE -DNETCODE_RELEASE -DRELIABLE_RELEASE)
-endif()
+endif ()
 
 # sodium-builtin static library
 add_library(sodium-builtin STATIC)
+
+target_include_directories(sodium-builtin PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/sodium/
+)
 target_sources(sodium-builtin PRIVATE sodium/dummy.c)
 
-if(WIN32)
+if (WIN32)
     file(GLOB_RECURSE SODIUM_SOURCES "sodium/*.c")
     file(GLOB_RECURSE SODIUM_HEADERS "sodium/*.h")
     target_sources(sodium-builtin PRIVATE ${SODIUM_SOURCES} ${SODIUM_HEADERS})
-else()
+else ()
     # Check if we're on x64, avx, or avx2 platforms
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
         file(GLOB_RECURSE SODIUM_ASM "sodium/*.S")
         target_sources(sodium-builtin PRIVATE ${SODIUM_ASM})
-    endif()
+    endif ()
 
     # Add compiler flags for non-MSVC builds
     target_compile_options(sodium-builtin PRIVATE
@@ -57,20 +58,30 @@ else()
             -Wno-unused-variable
             -Wno-type-limits
     )
-endif()
+endif ()
 
 # netcode static library
 add_library(netcode STATIC)
+target_include_directories(netcode PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/netcode/
+)
 target_sources(netcode PRIVATE netcode/netcode.c netcode/netcode.h)
 target_compile_definitions(netcode PRIVATE NETCODE_ENABLE_TESTS=1)
+target_link_libraries(netcode PRIVATE sodium-builtin)
 
 # reliable static library
 add_library(reliable STATIC)
+target_include_directories(reliable PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/reliable/
+)
 target_sources(reliable PRIVATE reliable/reliable.c reliable/reliable.h)
 target_compile_definitions(reliable PRIVATE RELIABLE_ENABLE_TESTS=1)
 
 # tlsf static library
 add_library(tlsf STATIC)
+target_include_directories(tlsf PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/tlsf/
+)
 target_sources(tlsf PRIVATE tlsf/tlsf.c tlsf/tlsf.h)
 
 # yojimbo static library
@@ -79,7 +90,19 @@ add_library(yojimbo::yojimbo ALIAS yojimbo)
 
 file(GLOB YOJIMBO_HEADERS "include/*.h")
 file(GLOB YOJIMBO_SOURCES "source/*.cpp")
+
+target_include_directories(yojimbo PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        ${CMAKE_CURRENT_SOURCE_DIR}/serialize/
+        ${CMAKE_CURRENT_SOURCE_DIR}/
+)
 target_sources(yojimbo PRIVATE ${YOJIMBO_HEADERS} ${YOJIMBO_SOURCES})
+target_link_libraries(yojimbo PUBLIC
+        sodium-builtin
+        netcode
+        reliable
+        tlsf
+)
 
 set_target_properties(yojimbo
         PROPERTIES
@@ -91,27 +114,19 @@ set_target_properties(yojimbo
 function(add_yojimbo_executable target_name source_file)
     add_executable(${target_name} ${source_file} shared.h)
 
-    if(WIN32)
+    if (WIN32)
         target_link_libraries(${target_name}
-                yojimbo
-                sodium-builtin
-                tlsf
-                netcode
-                reliable
+                yojimbo::yojimbo
         )
-    else()
+    else ()
         target_link_libraries(${target_name}
-                yojimbo
-                sodium
-                tlsf
-                netcode
-                reliable
+                yojimbo::yojimbo
         )
         # Add homebrew lib directory for macOS
-        if(APPLE)
+        if (APPLE)
             target_link_directories(${target_name} PRIVATE /opt/homebrew/lib)
-        endif()
-    endif()
+        endif ()
+    endif ()
 endfunction()
 
 # client executable
@@ -130,40 +145,15 @@ add_yojimbo_executable(soak soak.cpp)
 add_executable(test test.cpp)
 target_compile_definitions(test PRIVATE SERIALIZE_ENABLE_TESTS=1)
 
-if(WIN32)
+if (WIN32)
     target_link_libraries(test
-            yojimbo
-            sodium-builtin
-            tlsf
-            netcode
-            reliable
+            yojimbo::yojimbo
     )
-else()
+else ()
     target_link_libraries(test
-            yojimbo
-            sodium
-            tlsf
-            netcode
-            reliable
+            yojimbo::yojimbo
     )
-    if(APPLE)
+    if (APPLE)
         target_link_directories(test PRIVATE /opt/homebrew/lib)
-    endif()
-endif()
-
-# Custom clean target (CMake has built-in clean, but this matches the original)
-add_custom_target(clean-all
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/obj
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/ipch
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/bin
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/.vs
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/Debug
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/Release
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/release
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/cov-int
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/docker/yojimbo
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/valgrind/yojimbo
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/docs
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/xml
-        COMMENT "Cleaning all build files and output"
-)
+    endif ()
+endif ()
