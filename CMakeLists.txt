@@ -17,9 +17,6 @@ option(YOJIMBO_INSTALL "Install yojimbo files" ON)
 
 # Global settings
 set(CMAKE_CXX_RTTI OFF)
-if (NOT WIN32)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-endif ()
 
 # Set position independent code for shared libraries
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
