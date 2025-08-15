@@ -190,7 +190,7 @@ After installation, you'll have:
 ```
 ${CMAKE_INSTALL_PREFIX}/
 ├── lib/
-│   ├── libyojimbo.a (or .so/.dll)
+│   ├── libyojimbo.a (or .so/.lib)
 │   ├── libnetcode.a
 │   ├── libreliable.a
 │   ├── libtlsf.a
