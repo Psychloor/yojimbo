@@ -1,0 +1,7 @@
+﻿@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+include("${CMAKE_CURRENT_LIST_DIR}/yojimboTargets.cmake")
+
+check_required_components(yojimbo)
