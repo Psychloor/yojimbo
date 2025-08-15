@@ -195,6 +195,11 @@ if (YOJIMBO_INSTALL)
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/yojimbo
     )
 
+    # Install license
+    install(FILES LICENSE
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+
     # Install dependency headers
     install(DIRECTORY netcode/
             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/yojimbo/netcode
