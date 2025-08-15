@@ -1,7 +1,5 @@
 ﻿# Building Yojimbo
 
-This document provides comprehensive instructions for building and installing the Yojimbo network library.
-
 ## Prerequisites
 
 ### Required Tools
