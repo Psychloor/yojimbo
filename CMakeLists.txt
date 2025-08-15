@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.15)
+﻿cmake_minimum_required(VERSION 3.31)
 project(Yojimbo
         VERSION 1.2.3
         LANGUAGES C CXX
@@ -102,8 +102,11 @@ target_include_directories(tlsf PUBLIC
 add_library(yojimbo STATIC)
 add_library(yojimbo::yojimbo ALIAS yojimbo)
 
-file(GLOB YOJIMBO_HEADERS "include/*.h")
-file(GLOB YOJIMBO_SOURCES "source/*.cpp")
+# Collect sources/headers
+file(GLOB_RECURSE YOJIMBO_SOURCES "source/*.cpp")
+file(GLOB_RECURSE YOJIMBO_PUBLIC_HEADERS "include/*.h")
+file(GLOB_RECURSE YOJIMBO_SERIALIZE_HEADERS "serialize/*.h")
+
 
 target_include_directories(yojimbo PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
@@ -111,7 +114,20 @@ target_include_directories(yojimbo PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/yojimbo>
 )
-target_sources(yojimbo PRIVATE ${YOJIMBO_HEADERS} ${YOJIMBO_SOURCES})
+target_sources(yojimbo
+        PRIVATE
+        ${YOJIMBO_SOURCES}
+
+        PUBLIC
+        FILE_SET public_headers TYPE HEADERS
+        BASE_DIRS
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/serialize"
+        FILES
+        ${YOJIMBO_PUBLIC_HEADERS}
+        ${YOJIMBO_SERIALIZE_HEADERS}
+)
+
 target_link_libraries(yojimbo PUBLIC
         sodium-builtin
         netcode
@@ -119,10 +135,10 @@ target_link_libraries(yojimbo PUBLIC
         tlsf
 )
 
+
+target_compile_features(yojimbo PUBLIC cxx_std_11)
 set_target_properties(yojimbo
         PROPERTIES
-        CMAKE_CXX_STANDARD 11
-        CMAKE_CXX_STANDARD_REQUIRED ON
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
         EXPORT_NAME yojimbo
@@ -187,18 +203,14 @@ endif ()
 
 # Installation
 if (YOJIMBO_INSTALL)
-    # Install libraries
+    # Install libraries and the header file set
     install(TARGETS yojimbo sodium-builtin netcode reliable tlsf
             EXPORT yojimboTargets
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/yojimbo
-    )
-
-    # Install headers
-    install(FILES ${YOJIMBO_HEADERS}
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/yojimbo
+            FILE_SET public_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/yojimbo
     )
 
     set(YOJIMBO_LICENSE_FILE "")
@@ -298,9 +310,10 @@ endif ()
 
 # CPack configuration for creating packages
 set(CPACK_PACKAGE_NAME "yojimbo")
-set(CPACK_PACKAGE_VENDOR "Network Next")
+set(CPACK_PACKAGE_VENDOR "Mas Bandwidth LLC")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A network library for client/server games with dedicated servers")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "yojimbo")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENCE")
 include(CPack)
+
