@@ -33,11 +33,10 @@ endif ()
 
 # sodium-builtin static library
 add_library(sodium-builtin STATIC)
-
+target_sources(sodium-builtin PRIVATE sodium/dummy.c)
 target_include_directories(sodium-builtin PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/sodium/
 )
-target_sources(sodium-builtin PRIVATE sodium/dummy.c)
 
 if (WIN32)
     file(GLOB_RECURSE SODIUM_SOURCES "sodium/*.c")
@@ -62,27 +61,27 @@ endif ()
 
 # netcode static library
 add_library(netcode STATIC)
-target_include_directories(netcode PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/netcode/
-)
 target_sources(netcode PRIVATE netcode/netcode.c netcode/netcode.h)
 target_compile_definitions(netcode PRIVATE NETCODE_ENABLE_TESTS=1)
 target_link_libraries(netcode PRIVATE sodium-builtin)
+target_include_directories(netcode PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/netcode/
+)
 
 # reliable static library
 add_library(reliable STATIC)
+target_sources(reliable PRIVATE reliable/reliable.c reliable/reliable.h)
+target_compile_definitions(reliable PRIVATE RELIABLE_ENABLE_TESTS=1)
 target_include_directories(reliable PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/reliable/
 )
-target_sources(reliable PRIVATE reliable/reliable.c reliable/reliable.h)
-target_compile_definitions(reliable PRIVATE RELIABLE_ENABLE_TESTS=1)
 
 # tlsf static library
 add_library(tlsf STATIC)
+target_sources(tlsf PRIVATE tlsf/tlsf.c tlsf/tlsf.h)
 target_include_directories(tlsf PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/tlsf/
 )
-target_sources(tlsf PRIVATE tlsf/tlsf.c tlsf/tlsf.h)
 
 # yojimbo static library
 add_library(yojimbo STATIC)
